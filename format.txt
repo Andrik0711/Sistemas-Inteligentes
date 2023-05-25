@@ -1,0 +1,29 @@
+Se debe buscar la forma de que el archivo json se pueda represenar en formo de grafo
+
+{
+  "grafo": {
+    "nodos": [
+      {
+        "id": "A"
+      },
+      {
+        "id": "B"
+      },
+      {
+        "id": "C"
+      }
+    ],
+    "aristas": [
+      {
+        "inicio": "A",
+        "fin": "B",
+        "peso": 2
+      },
+      {
+        "inicio": "B",
+        "fin": "C",
+        "peso": 3
+      }
+    ]
+  }
+}
