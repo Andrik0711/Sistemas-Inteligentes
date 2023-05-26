@@ -1,21 +1,108 @@
-import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QFrame
-from PyQt5.QtGui import QPainter, QBrush, QPen
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPainter, QBrush, QFont, QColor, QPen, QPolygonF
+from PyQt5.QtCore import Qt, QPoint
+from math import cos, sin, pi
+from math import atan2
+import sys
+import json
+import random
 
 
 class GraphWidget(QWidget):
     def __init__(self):
         super().__init__()
 
+        self.nodes = []
+        self.edges = []
+
+    def drawGraph(self, nodes, edges):
+        self.nodes = nodes
+        self.edges = edges
+        self.update()
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(event.rect(), Qt.white)
 
-        # Aquí puedes agregar la lógica para dibujar tu gráfico
-        # Utiliza los métodos proporcionados por QPainter para dibujar líneas, formas, etc.
-        # Puedes consultar la documentación de QPainter para obtener más información
+        # Dibujar nodos
+        radius = 15  # Radio de los nodos (1.5 cm)
+        node_color = QColor(255, 0, 0)  # Color de los nodos (rojo)
+        # Color del texto (identificador) (azul)
+        text_color = QColor(0, 0, 255)
+        # Color de la flecha (conexión) (verde)
+        arrow_color = QColor(0, 255, 0)
+        weight_color = QColor(255, 255, 0)  # Color del texto (peso) (amarillo)
+
+        # Fuente del texto (Helvetica, tamaño 10)
+        font = QFont("Helvetica", 10)
+
+        for node in self.nodes:
+            node_id = node.get("id")
+
+            # Generar posiciones aleatorias dentro de main_layout
+            x = random.randint(radius, self.parent().width() - radius * 2)
+            y = random.randint(radius, self.parent().height() - radius * 2)
+
+            # Dibujar nodo circular
+            node_center = QPoint(x, y)
+            painter.setBrush(node_color)
+            painter.drawEllipse(node_center, radius, radius)
+
+            # Dibujar identificador dentro del nodo
+            painter.setPen(text_color)
+            painter.setFont(font)
+            text_width = painter.fontMetrics().boundingRect(str(node_id)).width()
+            text_height = painter.fontMetrics().height()
+            text_pos = node_center - \
+                QPoint(int(int(text_width) / 2), int(int(text_height) / 2))
+            painter.drawText(text_pos, str(node_id))
+
+        # Dibujar aristas (conexiones)
+        arrow_size = 15  # Tamaño de la flecha
+        weight_offset = 20  # Desplazamiento del peso respecto a la flecha
+
+        for edge in self.edges:
+            source_id = edge.get("source")
+            target_id = edge.get("target")
+            weight = edge.get("weight")
+
+            # Obtener las coordenadas de origen y destino de la arista
+            source_node = next(
+                (node for node in self.nodes if node.get("id") == source_id), None)
+            target_node = next(
+                (node for node in self.nodes if node.get("id") == target_id), None)
+
+            if source_node and target_node:
+                source_x = source_node.get("x", 0)
+                source_y = source_node.get("y", 0)
+                target_x = target_node.get("x", 0)
+                target_y = target_node.get("y", 0)
+
+                # Calcular los ángulos de inicio y fin de la flecha
+                angle = atan2(target_y - source_y, target_x - source_x)
+                angle_deg = angle * 180 / pi
+
+                # Dibujar flecha
+                painter.setPen(QPen(arrow_color, 2))
+                painter.setBrush(arrow_color)
+                painter.drawLine(source_x, source_y, target_x, target_y)
+                painter.translate(target_x, target_y)
+                painter.rotate(angle_deg)
+                painter.drawPolygon(QPolygonF([
+                    QPoint(0, 0),
+                    QPoint(-int(arrow_size), int(int(arrow_size) / 2)),
+                    QPoint(-int(arrow_size), int(-int(arrow_size) / 2))
+                ]))
+
+                # Dibujar peso
+                painter.resetTransform()
+                painter.setPen(weight_color)
+                painter.setFont(font)
+                weight_pos = QPoint(int((source_x + target_x) / 2),
+                                    int((source_y + target_y) / 2))
+                painter.drawText(
+                    weight_pos + QPoint(weight_offset, 0), str(weight))
 
 
 class MainWindow(QMainWindow):
@@ -81,8 +168,19 @@ class MainWindow(QMainWindow):
             self, "Open JSON File", "", file_filter, options=options)
 
         if file_path:
-            # Aquí puedes hacer algo con el archivo seleccionado, como cargarlo en el GraphWidget
-            print("Archivo seleccionado:", file_path)
+            # Cargar el archivo JSON
+            with open(file_path) as json_file:
+                data = json.load(json_file)
+
+            # Obtener nodos y aristas del archivo JSON
+            nodes = data.get("nodes", [])
+            edges = data.get("edges", [])
+
+            # Imprimir los nodos y conexiones en la consola para verificar que si se cargaron correctamente
+            print(nodes)
+            print(edges)
+            # Dibujar los nodos y conexiones en el GraphWidget
+            self.graph_widget.drawGraph(nodes, edges)
 
 
 if __name__ == "__main__":
