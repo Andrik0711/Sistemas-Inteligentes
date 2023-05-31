@@ -1,109 +1,127 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QFrame
 from PyQt5.QtGui import QPainter, QBrush, QFont, QColor, QPen, QPolygonF
 from PyQt5.QtCore import Qt, QPoint
-from math import cos, sin, pi
-from math import atan2
 import sys
 import json
 import random
 
 
-class GraphWidget(QWidget):
+
+import matplotlib.pyplot as plt
+import networkx as nx
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+
+
+class MinimumSpanningTreeTab(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.nodes = []
-        self.edges = []
+        self.layout = QVBoxLayout()
+        self.setLayout(self.layout)
+
+        # Crear una figura de Matplotlib y un lienzo de figura de Qt
+        self.figure = plt.figure()
+        self.canvas = FigureCanvas(self.figure)
+
+        # Agregar el lienzo al diseño vertical
+        self.layout.addWidget(self.canvas)
 
     def drawGraph(self, nodes, edges):
-        self.nodes = nodes
-        self.edges = edges
-        self.update()
+        # Borrar el contenido de la figura antes de dibujar el grafo
+        self.figure.clear()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(event.rect(), Qt.white)
+        # Crear el grafo
+        graph = nx.Graph()
 
-        # Dibujar nodos
-        radius = 15  # Radio de los nodos (1.5 cm)
-        node_color = QColor(255, 0, 0)  # Color de los nodos (rojo)
-        # Color del texto (identificador) (azul)
-        text_color = QColor(0, 0, 255)
-        # Color de la flecha (conexión) (verde)
-        arrow_color = QColor(0, 255, 0)
-        weight_color = QColor(255, 255, 0)  # Color del texto (peso) (amarillo)
+        # Convertir los identificadores de nodos a cadenas
+        nodes = [str(node.get("id")) for node in nodes]
 
-        # Fuente del texto (Helvetica, tamaño 10)
-        font = QFont("Helvetica", 10)
+        # Agregar los nodos al grafo
+        graph.add_nodes_from(nodes)
 
-        for node in self.nodes:
-            node_id = node.get("id")
+        # Agregar las aristas al grafo y dibujar las conexiones con direcciones y pesos
+        for edge in edges:
+            source_node = str(edge.get("source"))
+            target_node = str(edge.get("target"))
+            weight = str(edge.get("weight", ""))
 
-            # Generar posiciones aleatorias dentro de main_layout
-            x = random.randint(radius, self.parent().width() - radius * 2)
-            y = random.randint(radius, self.parent().height() - radius * 2)
+            # Agregar la arista al grafo
+            graph.add_edge(source_node, target_node, weight=weight)
 
-            # Dibujar nodo circular
-            node_center = QPoint(x, y)
-            painter.setBrush(node_color)
-            painter.drawEllipse(node_center, radius, radius)
+        # Dibujar los nodos en la figura
+        pos = nx.spring_layout(graph)
+        nx.draw_networkx_nodes(graph, pos, node_color='lightblue')
 
-            # Dibujar identificador dentro del nodo
-            painter.setPen(text_color)
-            painter.setFont(font)
-            text_width = painter.fontMetrics().boundingRect(str(node_id)).width()
-            text_height = painter.fontMetrics().height()
-            text_pos = node_center - \
-                QPoint(int(int(text_width) / 2), int(int(text_height) / 2))
-            painter.drawText(text_pos, str(node_id))
+        # Dibujar las aristas (conexiones) en la figura con etiquetas de peso
+        nx.draw_networkx_edges(graph, pos, edge_color='black', arrows=True, arrowstyle='->')
+        labels = nx.get_edge_attributes(graph, 'weight')
+        nx.draw_networkx_edge_labels(graph, pos, edge_labels=labels)
 
-        # Dibujar aristas (conexiones)
-        arrow_size = 15  # Tamaño de la flecha
-        weight_offset = 20  # Desplazamiento del peso respecto a la flecha
+        # Dibujar los identificadores de los nodos
+        node_labels = {node: node for node in graph.nodes}
+        nx.draw_networkx_labels(graph, pos, labels=node_labels, font_color='black')
 
-        for edge in self.edges:
-            source_id = edge.get("source")
-            target_id = edge.get("target")
-            weight = edge.get("weight")
+        # Actualizar el lienzo de la figura
+        self.canvas.draw()
 
-            # Obtener las coordenadas de origen y destino de la arista
-            source_node = next(
-                (node for node in self.nodes if node.get("id") == source_id), None)
-            target_node = next(
-                (node for node in self.nodes if node.get("id") == target_id), None)
 
-            if source_node and target_node:
-                source_x = source_node.get("x", 0)
-                source_y = source_node.get("y", 0)
-                target_x = target_node.get("x", 0)
-                target_y = target_node.get("y", 0)
+# class GraphWidget(QWidget):
+#     def __init__(self):
+#         super().__init__()
 
-                # Calcular los ángulos de inicio y fin de la flecha
-                angle = atan2(target_y - source_y, target_x - source_x)
-                angle_deg = angle * 180 / pi
+#         self.nodes = []
+#         self.edges = []
 
-                # Dibujar flecha
-                painter.setPen(QPen(arrow_color, 2))
-                painter.setBrush(arrow_color)
-                painter.drawLine(source_x, source_y, target_x, target_y)
-                painter.translate(target_x, target_y)
-                painter.rotate(angle_deg)
-                painter.drawPolygon(QPolygonF([
-                    QPoint(0, 0),
-                    QPoint(-int(arrow_size), int(int(arrow_size) / 2)),
-                    QPoint(-int(arrow_size), int(-int(arrow_size) / 2))
-                ]))
+#     def drawGraph(self, nodes, edges):
+#         self.nodes = nodes
+#         self.edges = edges
+#         self.update()
 
-                # Dibujar peso
-                painter.resetTransform()
-                painter.setPen(weight_color)
-                painter.setFont(font)
-                weight_pos = QPoint(int((source_x + target_x) / 2),
-                                    int((source_y + target_y) / 2))
-                painter.drawText(
-                    weight_pos + QPoint(weight_offset, 0), str(weight))
+#     def paintEvent(self, event):
+#         painter = QPainter(self)
+#         painter.setRenderHint(QPainter.Antialiasing)
+#         painter.fillRect(event.rect(), Qt.white)
 
+#         # Ajustar márgenes del área de dibujo
+#         menu_margin_right = 200  # Ancho del menú derecho
+#         layout_margin_right = 20  # Margen adicional para el layout principal
+
+#         # Área para dibujar los nodos dentro del layout principal
+#         area = self.parent().rect().adjusted(20, 20, -menu_margin_right - layout_margin_right, -20)
+
+#         # Dibujar nodos
+#         radius = 15  # Radio de los nodos (1.5 cm)
+#         node_color = QColor(255, 0, 0)  # Color de los nodos (rojo)
+#         # Color del texto (identificador) (azul)
+#         text_color = QColor(0, 0, 255)
+
+#         font = QFont("Arial", 12)
+
+#         for node in self.nodes:
+#             node_id = str(node.get("id"))
+
+#             # Generar posiciones aleatorias dentro del área
+#             x = random.randint(area.left() + radius, area.right() - radius)
+#             y = random.randint(area.top() + radius, area.bottom() - radius)
+
+#             # Dibujar nodo circular
+#             node_center = QPoint(x, y)
+#             painter.setPen(Qt.NoPen)  # No se dibuja la línea del nodo
+#             painter.setBrush(node_color)
+#             painter.drawEllipse(node_center, radius, radius)
+
+#             # Dibujar identificador centrado en el nodo
+#             painter.setPen(text_color)
+#             painter.setFont(font)
+#             text_rect = painter.fontMetrics().boundingRect(node_id)
+#             text_width = text_rect.width()
+#             text_height = text_rect.height()
+
+#             # Posición del texto centrado en el nodo, aun no lo centra bien puede ser por el tamaño de la fuente
+#             text_pos = node_center - QPoint(int(text_width / 2), int(text_height / 7   ))
+#             painter.drawText(text_pos, node_id)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -113,7 +131,7 @@ class MainWindow(QMainWindow):
         self.setFixedSize(1000, 700)  # Tamaño fijo de la ventana principal
 
         # Crear el widget del gráfico
-        self.graph_widget = GraphWidget()
+        self.graph_widget = MinimumSpanningTreeTab()
 
         # Crear los botones del menú lateral
         self.btn_find = QPushButton("Find")
@@ -177,8 +195,10 @@ class MainWindow(QMainWindow):
             edges = data.get("edges", [])
 
             # Imprimir los nodos y conexiones en la consola para verificar que si se cargaron correctamente
-            print(nodes)
-            print(edges)
+            # print(type(nodes))
+            # print(type(edges))
+            # print(nodes)
+            # print(edges)
             # Dibujar los nodos y conexiones en el GraphWidget
             self.graph_widget.drawGraph(nodes, edges)
 
