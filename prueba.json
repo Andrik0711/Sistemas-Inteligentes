@@ -1,15 +1,15 @@
 {
-    "nodes": [
-      {"id": "A"},
-      {"id": "B"},
-      {"id": "C"},
-      {"id": "D"}
-    ],
-    "edges": [
-      {"source": "A", "target": "B", "weight": 2},
-      {"source": "B", "target": "C", "weight": 3},
-      {"source": "C", "target": "D", "weight": 4},
-      {"source": "D", "target": "A", "weight": 1}
-    ]
-  }
-  
+  "nodes": [
+    {"id": "A"},
+    {"id": "B"},
+    {"id": "C"},
+    {"id": "D"}
+  ],
+  "edges": [
+    {"source": "A", "target": "B", "weight": 5},
+    {"source": "B", "target": "C", "weight": 3},
+    {"source": "C", "target": "D", "weight": 2},
+    {"source": "D", "target": "A", "weight": 4},
+    {"source": "A", "target": "C", "weight": 1}
+  ]
+}

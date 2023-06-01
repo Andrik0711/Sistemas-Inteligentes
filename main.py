@@ -1,16 +1,9 @@
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QFileDialog, QLabel, QFrame
-from PyQt5.QtGui import QPainter, QBrush, QFont, QColor, QPen, QPolygonF
-from PyQt5.QtCore import Qt, QPoint
 import sys
 import json
-import random
-
-
-
 import matplotlib.pyplot as plt
 import networkx as nx
-
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
@@ -55,73 +48,19 @@ class MinimumSpanningTreeTab(QWidget):
         nx.draw_networkx_nodes(graph, pos, node_color='lightblue')
 
         # Dibujar las aristas (conexiones) en la figura con etiquetas de peso
-        nx.draw_networkx_edges(graph, pos, edge_color='black', arrows=True, arrowstyle='->')
+        nx.draw_networkx_edges(
+            graph, pos, edge_color='black', arrows=True, arrowstyle='->')
         labels = nx.get_edge_attributes(graph, 'weight')
         nx.draw_networkx_edge_labels(graph, pos, edge_labels=labels)
 
         # Dibujar los identificadores de los nodos
         node_labels = {node: node for node in graph.nodes}
-        nx.draw_networkx_labels(graph, pos, labels=node_labels, font_color='black')
+        nx.draw_networkx_labels(
+            graph, pos, labels=node_labels, font_color='black')
 
         # Actualizar el lienzo de la figura
         self.canvas.draw()
 
-
-# class GraphWidget(QWidget):
-#     def __init__(self):
-#         super().__init__()
-
-#         self.nodes = []
-#         self.edges = []
-
-#     def drawGraph(self, nodes, edges):
-#         self.nodes = nodes
-#         self.edges = edges
-#         self.update()
-
-#     def paintEvent(self, event):
-#         painter = QPainter(self)
-#         painter.setRenderHint(QPainter.Antialiasing)
-#         painter.fillRect(event.rect(), Qt.white)
-
-#         # Ajustar márgenes del área de dibujo
-#         menu_margin_right = 200  # Ancho del menú derecho
-#         layout_margin_right = 20  # Margen adicional para el layout principal
-
-#         # Área para dibujar los nodos dentro del layout principal
-#         area = self.parent().rect().adjusted(20, 20, -menu_margin_right - layout_margin_right, -20)
-
-#         # Dibujar nodos
-#         radius = 15  # Radio de los nodos (1.5 cm)
-#         node_color = QColor(255, 0, 0)  # Color de los nodos (rojo)
-#         # Color del texto (identificador) (azul)
-#         text_color = QColor(0, 0, 255)
-
-#         font = QFont("Arial", 12)
-
-#         for node in self.nodes:
-#             node_id = str(node.get("id"))
-
-#             # Generar posiciones aleatorias dentro del área
-#             x = random.randint(area.left() + radius, area.right() - radius)
-#             y = random.randint(area.top() + radius, area.bottom() - radius)
-
-#             # Dibujar nodo circular
-#             node_center = QPoint(x, y)
-#             painter.setPen(Qt.NoPen)  # No se dibuja la línea del nodo
-#             painter.setBrush(node_color)
-#             painter.drawEllipse(node_center, radius, radius)
-
-#             # Dibujar identificador centrado en el nodo
-#             painter.setPen(text_color)
-#             painter.setFont(font)
-#             text_rect = painter.fontMetrics().boundingRect(node_id)
-#             text_width = text_rect.width()
-#             text_height = text_rect.height()
-
-#             # Posición del texto centrado en el nodo, aun no lo centra bien puede ser por el tamaño de la fuente
-#             text_pos = node_center - QPoint(int(text_width / 2), int(text_height / 7   ))
-#             painter.drawText(text_pos, node_id)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -162,19 +101,24 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
 
+        # Desactivar el botón "Reset" por defecto
+        self.btn_reset.setEnabled(False)
+        # Desactivar el botón "Find" por defecto
+        self.btn_find.setEnabled(False)
+
         # Establecer el widget central en la ventana principal
         self.setCentralWidget(central_widget)
 
     def find_button_clicked(self):
-        # Lógica cuando se hace clic en el botón Find
         pass
 
     def reset_button_clicked(self):
-        # Lógica cuando se hace clic en el botón Reset
-        pass
+        if self.graph_widget.figure.axes:  # Verificar si hay algún dibujo presente
+            self.graph_widget.figure.clear()  # Borrar el contenido de la figura
+            self.graph_widget.canvas.draw()  # Actualizar el lienzo de la figura
+            self.btn_reset.setEnabled(False)  # Desactivar el botón "Reset"
 
     def new_graph_button_clicked(self):
-        # Lógica cuando se hace clic en el botón New Graph
         # Al momento de hacer clic se debe abrir la ventana de escritorio para que solo permita cargar archivos json
 
         options = QFileDialog.Options()
@@ -194,13 +138,10 @@ class MainWindow(QMainWindow):
             nodes = data.get("nodes", [])
             edges = data.get("edges", [])
 
-            # Imprimir los nodos y conexiones en la consola para verificar que si se cargaron correctamente
-            # print(type(nodes))
-            # print(type(edges))
-            # print(nodes)
-            # print(edges)
             # Dibujar los nodos y conexiones en el GraphWidget
             self.graph_widget.drawGraph(nodes, edges)
+
+            self.btn_reset.setEnabled(True)
 
 
 if __name__ == "__main__":
