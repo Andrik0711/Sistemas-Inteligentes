@@ -3,7 +3,7 @@ import json
 import networkx as nx
 import matplotlib.pyplot as plt
 from PyQt5.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QPushButton, QFileDialog, QMessageBox, QHBoxLayout
-from PyQt5.QtCore import QTimer, QEventLoop, Qt
+from PyQt5.QtCore import QTimer, Qt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
 
@@ -19,7 +19,8 @@ class GraphWindow(QMainWindow):
 
         self.AlgorithmPrim = AlgorithPrim()
 
-        self.setWindowTitle("Graph Viewer")
+        self.setWindowTitle(
+            "Simulación de Algoritmo de Prim con Interfaz Gráfica")
         self.setFixedSize(1000, 700)  # tamaño fijo de la ventana
 
         self.figure = plt.figure()
@@ -79,32 +80,44 @@ class GraphWindow(QMainWindow):
             QMessageBox.warning(self, "Error", "No file selected.")
 
     def draw_graph(self, json_data):
-        self.graph = nx.Graph()
+        self.graph = nx.Graph()  # crea un grafo vacio
 
+        # agrega los nodos al grafo creado
         for node in json_data["nodes"]:
             self.graph.add_node(node["id"])
 
+        # agrega las aristas al grafo creado
         for edge in json_data["edges"]:
+            #  agrega las aristas con su peso al grafo
             self.graph.add_edge(
                 edge["source"], edge["target"], weight=edge["weight"])
 
-        self.node_positions = nx.spring_layout(self.graph)
+        self.node_positions = nx.spring_layout(
+            self.graph)  # posiciona los nodos en el grafo
 
+        # limpia el grafo que fue cargado previamente
         self.figure.clear()
+
+        # dibuja los nodos del grafo
         nx.draw(self.graph, with_labels=True,
                 pos=self.node_positions, ax=self.figure.gca())
+
+        # dibuja el grafo
         self.canvas.draw()
 
     def find_mst(self):
+        # Si el grafo no está cargado, no hace nada
         if self.graph is None:
             QMessageBox.warning(self, "Error", "Datos del grafo no validos")
             return
 
+        # Si el árbol de expansión mínima no ha sido calculado, se calcula
         if self.tree_edges is None:
             self.tree_edges = AlgorithPrim.prim_mst(self.graph)
             self.current_edge_index = 0
             self.completed = False
 
+        # Si el árbol de expansión mínima ya fue calculado, se detiene la animación
         if self.completed:
             QMessageBox.information(
                 self, "Listo", "Minimum Spanning Tree encontrado.")
@@ -113,10 +126,13 @@ class GraphWindow(QMainWindow):
         self.next_step()
 
     def next_step(self):
+        # Si el grafo no está cargado, no hace nada
         if self.tree_edges is None:
             return
 
+        # Si el índice de la arista actual es mayor o igual al número de aristas del árbol, se detiene la animación
         if self.current_edge_index >= len(self.tree_edges):
+            # Se asegura de que el índice de la arista actual no sea mayor al número de aristas del árbol
             self.current_edge_index = len(self.tree_edges) - 1
             self.completed = True
 
@@ -124,33 +140,39 @@ class GraphWindow(QMainWindow):
                 self, "Listo", "Minimum Spanning Tree encontrado.")
             return
 
+        # Colorea las aristas del árbol de expansión mínima
         self.highlight_edges()
-
         self.current_edge_index += 1
 
         # Pausa de 3 segundos antes de la siguiente animación
-        QTimer.singleShot(2000, self.next_step)
+        QTimer.singleShot(6000, self.next_step)
 
     def highlight_edges(self):
+        # Si el grafo no está cargado, no hace nada
         if self.tree_edges is None:
             return
 
+        # Limpia el grafo que fue cargado previamente
         self.figure.clear()
 
+        # Colorea los nodos del grafo
         node_colors = ["gray" for _ in range(len(self.graph.nodes))]
 
-        # Colorea los nodos que están en el árbol de expansión mínima
+        # Colorea los nodos que están en el grafo
         for i, edge in enumerate(self.tree_edges):
-            if i <= self.current_edge_index:
+            if i <= self.current_edge_index:  # Si la arista está en el árbol de expansión mínima
                 source, target = edge
-                node_colors[list(self.graph.nodes).index(source)] = "blue"
+                # Colorea el nodo fuente de rojo
+                node_colors[list(self.graph.nodes).index(source)] = "red"
+                # Colorea el nodo destino de azul
                 node_colors[list(self.graph.nodes).index(target)] = "blue"
 
         nx.draw_networkx_nodes(
-            self.graph, self.node_positions, node_color=node_colors, node_size=400)
+            self.graph, self.node_positions, node_color=node_colors, node_size=400)  # Dibuja los nodos
+        # Dibuja las etiquetas de los nodos
         nx.draw_networkx_labels(self.graph, self.node_positions)
         nx.draw_networkx_edges(
-            self.graph, self.node_positions, edge_color="black", width=1, arrows=True, arrowstyle="->")
+            self.graph, self.node_positions, edge_color="black", width=1, arrows=True, arrowstyle="->")  # Dibuja las aristas
 
         # Dibuja el peso de las aristas
         edge_labels = {}
@@ -161,7 +183,7 @@ class GraphWindow(QMainWindow):
         nx.draw_networkx_edge_labels(
             self.graph, self.node_positions, edge_labels=edge_labels)
 
-        # Dibuja las aristas del árbol de expansión mínima
+        # Dibuja las aristas del árbol de expansión mínima que ya fueron recorridas
         for i, edge in enumerate(self.tree_edges):
             if i <= self.current_edge_index:
                 nx.draw_networkx_edges(self.graph, self.node_positions, edgelist=[
@@ -170,7 +192,7 @@ class GraphWindow(QMainWindow):
         # Dibuja los nodos del árbol de expansión mínima
         self.canvas.draw()
 
-    # Reinicia la animación
+    # Reinicia la animación del algoritmo
     def reset_animation(self):
         if self.tree_edges is None:
             return
@@ -207,6 +229,7 @@ class AlgorithPrim(QWidget):
         # Conjunto de nodos ya visitados
         visited = set([start_node])
 
+        # Itera hasta que todos los nodos estén visitados
         while len(visited) < len(graph.nodes):
             min_edge = None
             min_weight = float('inf')
@@ -217,6 +240,7 @@ class AlgorithPrim(QWidget):
                     min_edge = (source, target)
                     min_weight = data["weight"]
 
+            # Agregar la arista de menor peso encontrada al árbol
             if min_edge is not None:
                 tree_edges.append(min_edge)
                 visited.add(min_edge[1])
