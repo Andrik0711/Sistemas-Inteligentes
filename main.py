@@ -65,9 +65,12 @@ class GraphWindow(QMainWindow):
         self.timer.timeout.connect(self.next_step)
 
     def import_json(self):
-        file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getOpenFileName(
-            self, "Import JSON", "", "JSON Files (*.json)")
+        file_dialog = QFileDialog.Options()
+        file_dialog |= QFileDialog.DontUseNativeDialog
+
+
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Import JSON", "", "JSON Files (*.json)", options=file_dialog)
 
         if file_path:
             try:
